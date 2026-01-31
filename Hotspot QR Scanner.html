@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Hotspot QR Scanner</title>
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;   /* tengah horizontal */
+      align-items: center;       /* tengah vertikal */
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+    }
+
+    .container {
+      text-align: center;
+      background: #ffffff;
+      padding: 20px 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    video {
+      width: 300px;
+      height: 300px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      margin: 10px auto;
+      display: block;
+      background: #000;
+    }
+
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #startBtn {
+      background: #007bff;
+      color: #fff;
+    }
+
+    #flashBtn {
+      background: #28a745;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Hotspot QR Scanner</h2>
+
+  <video id="video" autoplay></video>
+
+  <div>
+    <button id="startBtn">Start Camera</button>
+    <button id="flashBtn">Toggle Flash</button>
+  </div>
+</div>
+
+<!-- Library QR -->
+<script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+
+<script>
+let video = document.getElementById("video");
+let stream, track;
+
+document.getElementById("startBtn").onclick = async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
+    video.srcObject = stream;
+    track = stream.getVideoTracks()[0];
+    scanQR();
+  } catch (e) {
+    alert("Camera error: " + e);
+  }
+};
+
+document.getElementById("flashBtn").onclick = async () => {
+  if (!track) return alert("Camera belum aktif");
+
+  const cap = track.getCapabilities();
+  if (!cap.torch) return alert("Flash tidak didukung HP ini");
+
+  const torchOn = track.getSettings().torch || false;
+  await track.applyConstraints({
+    advanced: [{ torch: !torchOn }]
+  });
+};
+
+function scanQR() {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  function scan() {
+    if (!video.videoWidth) {
+      requestAnimationFrame(scan);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, canvas.width, canvas.height);
+
+    if (code) {
+      // redirect ke URL dari QR
+      window.location.href = code.data;
+      return;
+    }
+    requestAnimationFrame(scan);
+  }
+
+  scan();
+}
+</script>
+
+</body>
+</html>
